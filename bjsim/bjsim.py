@@ -1,5 +1,6 @@
 import npyscreen
 import time
+import unittest
 
 class TestSuite(object):
 
@@ -67,10 +68,17 @@ class StatusForm(npyscreen.ActionFormV2):
 
 # debug
 class RunTest:
+    def __init__(self):
+        self.tester = unittest
+        self.tester.MakeLink(rx='/dev/ttyUSB0', tx='/dev/ttyUSB1')
 
     def t(self, id):
-        time.sleep(1)
         if id == 0:
+            self.timerun = time.time() + 60 * 3
+            if self.tester.handshake():
+                while time.time() > self.timoute:
+                    self.p = self.tester.get_packet
+                    self.tester.response_handler(d=self.p)
             return ': Ok'
         elif id == 1:
             return ' Ok'
