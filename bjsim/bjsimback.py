@@ -37,7 +37,7 @@ class TestSuite(object):
             return tr
 
 
-class StatusForm(npyscreen.ActionFormV2):
+class StatusForm(npyscreen.Form):
     def create(self):
             # TitleSlider name refuses to update...
             self.max_width = 200
@@ -47,8 +47,6 @@ class StatusForm(npyscreen.ActionFormV2):
                                hidden=True, max_height=15)
             self.ui = self.add(npyscreen.FixedText, value="Press OK To Begin -->",
                                rely=-3)
-    def on_cancel(self):
-        self.parentApp.switchForm('MAIN')
 
     def on_ok(self):
         self.rt = []
@@ -76,37 +74,22 @@ class StatusForm(npyscreen.ActionFormV2):
 
 class TestSelectionForm(npyscreen.ActionFormWithMenus):
     def create(self):
-        self.menu = self.new_menu(name='Settings', shortcut="^S")
-        self.menu.addItemsFromList([("Configure Serial Ports", self.cs)])
+    #    self.menu = self.new_menu(name='Settings', shortcut="^S")
+    #    self.menu.addItemsFromList([("Configure Serial Ports", self.cs)])
         self.values = self.parentApp.ts.listTest()
         self.selectedTest = self.add(npyscreen.TitleMultiSelect, name="Tests",
                                      values=self.values)
 
-    def cs(self):
-        self.parentApp.switchForm("SERIAL")
+    #def cs(self):
+    #    self.parentApp.switchForm("SERIAL")
 
     def on_ok(self):
-        if self.parentApp.ts.tx == 'stdout' or self.parentApp.ts.rx == 'empty':
-            self.parentApp.switchForm('WARNING')
-        else:
-            self.parentApp.ts.makeList(self.selectedTest.value,
-                                       self.selectedTest.values)
-            self.parentApp.switchForm("STATUS")
+        self.parentApp.ts.makeList(self.selectedTest.value,
+                                   self.selectedTest.values)
+        self.parentApp.switchForm("STATUS")
 
     def on_cancel(self):
         self.parentApp.switchForm(None)
-
-
-class DeviceWarning(npyscreen.ActionPopup):
-    def create(self):
-        self.warning = self.add(npyscreen.Textfield, editable=False,
-         value='Please Configure Serial Device')
-
-    def on_ok(self):
-        self.parentApp.switchFormPrevious()
-
-    def on_cancel(self):
-        self.parentApp.switchFormPrevious()
 
 
 class SerialConfig(npyscreen.ActionPopup):
@@ -128,7 +111,6 @@ class SerialConfig(npyscreen.ActionPopup):
             self.rx_exist = self.rxp.value
         self.parentApp.switchFormPrevious()
 
-
 class BongjoviSimulator(npyscreen.NPSAppManaged):
     def __init__(self, args):
         self.args = args
@@ -141,4 +123,3 @@ class BongjoviSimulator(npyscreen.NPSAppManaged):
         self.addForm('MAIN', TestSelectionForm, name="Bongjovi Simulator")
         self.addForm('STATUS', StatusForm, name='Testing Progress')
         self.addForm('SERIAL', SerialConfig, name='Serial Configuration')
-        self.addForm('WARNING', DeviceWarning, name='Serial Device Warning')
