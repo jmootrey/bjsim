@@ -1,5 +1,4 @@
 import npyscreen
-import time
 from bjsim import utest
 
 
@@ -38,7 +37,7 @@ class TestSuite(object):
             return tr
 
 
-class StatusForm(npyscreen.ActionFormV2):
+class StatusForm(npyscreen.Form):
     def create(self):
             # TitleSlider name refuses to update...
             self.max_width = 200
@@ -46,7 +45,7 @@ class StatusForm(npyscreen.ActionFormV2):
                                out_of=100, max_width=50)
             self.rs = self.add(npyscreen.TitlePager, rely=5, name="History",
                                hidden=True, max_height=15)
-            self.ui = self.add(npyscreen.FixedText, value="Press OK To Begin",
+            self.ui = self.add(npyscreen.FixedText, value="Press OK To Begin -->",
                                rely=-3)
 
     def on_ok(self):
@@ -57,48 +56,42 @@ class StatusForm(npyscreen.ActionFormV2):
         self.rs.hidden = False
         self.ui.value = "Running"
         self.display()
-        self.r = RunTest(self.parentApp.ts.tx, self.parentApp.ts.rx)
-        for test in self.ti:
-            # Class/function to handle test
-            self.result = self.r.t(0)
-            self.rtn = self.tt.pop(0)
-            self.rtn = self.rtn + self.result
-            self.rt.append(self.rtn)
-            self.rs.values = self.rt
-            self.sb.value += 1
-            self.display()
+        self.r = utest.Utest(self.parentApp.ts.tx, self.parentApp.ts.rx)
+        if self.r.MakeLink():
+            for test in self.ti:
+                # Class/function to handle test
+                self.result = self.r.t(0)
+                self.rtn = self.tt.pop(0)
+                self.rtn = self.rtn + self.result
+                self.rt.append(self.rtn)
+                self.rs.values = self.rt
+                self.sb.value += 1
+                self.display()
+            else:
+                self.rs.values = 'Connection Failed'
+                self.display()
 
 
-# debug
-class RunTest:
-    def __init__(self, tx, rx):
-        self.tester = utest.Utest()
-        self.tester.MakeLink(tx, rx)
-
-    def t(self, id):
-        if id == 0:
-            self.timeout = time.time() + 60 * 5
-            if self.tester.handshake():
-                while time.time() < self.timeout:
-                    self.p = self.tester.get_packet(f=False)
-                    self.tester.response_handler(d=self.p)
-            return ': Ok'
-        elif id == 1:
-            return ' Ok'
-        elif id == 2:
-            return ' Ok'
-
-
-class TestSelectionForm(npyscreen.ActionFormV2):
+class TestSelectionForm(npyscreen.FormWithMenus):
     def create(self):
+        self.menu = self.add_menu(name='Settings', shortcut="^S")
+        self.menu.addItemsFromList([
+             ("Display Text", self.wd, None, None, ("some text",)),
+        ])
         self.values = self.parentApp.ts.listTest()
         self.selectedTest = self.add(npyscreen.TitleMultiSelect, name="Tests",
                                      values=self.values)
+
+    def wd(self, argument):
+        npyscreen.notify_confirm(argument)
 
     def on_ok(self):
         self.parentApp.ts.makeList(self.selectedTest.value,
                                    self.selectedTest.values)
         self.parentApp.switchForm("STATUS")
+
+    def on_cancel(self):
+        self.parentApp.switchForm(None)
 
 
 class BongjoviSimulator(npyscreen.NPSAppManaged):

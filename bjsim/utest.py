@@ -5,16 +5,34 @@ Bonjoiv Amp
 
 '''
 import serial
+import time
+
 
 class Utest:
 
+    def __init__(self, tx, rx):
+        self.tx = tx
+        self.rx = rx
 
-    def MakeLink(self, tx, rx):
+    def RunTest(self):
+        if id == 0:
+            self.timeout = time.time() + 60 * 5
+            if self.tester.handshake():
+                while time.time() < self.timeout:
+                    self.p = self.tester.get_packet(f=False)
+                    self.tester.response_handler(d=self.p)
+            return ': Ok'
+        elif id == 1:
+            return ' Ok'
+        elif id == 2:
+            return ' Ok'
+
+    def MakeLink(self):
         try:
             # transmit bus
-            self.tx = serial.Serial(port=tx, baudrate=115200, timeout=.4)
+            self.tx = serial.Serial(port=self.tx, baudrate=115200, timeout=.4)
             # rec bus
-            self.rx = serial.Serial(port=rx, baudrate=115200, timeout=.4)
+            self.rx = serial.Serial(port=self.rx, baudrate=115200, timeout=.4)
             return True
         except ValueError:
             return NameError('Illegal Comm Parameter')
