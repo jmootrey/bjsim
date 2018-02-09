@@ -1,10 +1,13 @@
 import npyscreen
 import time
-import unittest
+from bjsim import utest
+
 
 class TestSuite(object):
+    tx = None
+    rx = None
 
-    def __init__(self):
+    def __init__(self, args):
         self.t = ["Normal Operating / Response", "Late Reply", "Mid-Op Reset"]
         self.toRuni = None
         self.toRunt = None
@@ -54,7 +57,7 @@ class StatusForm(npyscreen.ActionFormV2):
         self.rs.hidden = False
         self.ui.value = "Running"
         self.display()
-        self.r = RunTest()
+        self.r = RunTest(self.parentApp.ts.tx, self.parentApp.ts.rx)
         for test in self.ti:
             # Class/function to handle test
             self.result = self.r.t(0)
@@ -68,16 +71,16 @@ class StatusForm(npyscreen.ActionFormV2):
 
 # debug
 class RunTest:
-    def __init__(self):
-        self.tester = unittest
-        self.tester.MakeLink(rx='/dev/ttyUSB0', tx='/dev/ttyUSB1')
+    def __init__(self, tx, rx):
+        self.tester = utest.Utest()
+        self.tester.MakeLink(tx, rx)
 
     def t(self, id):
         if id == 0:
-            self.timerun = time.time() + 60 * 3
+            self.timeout = time.time() + 60 * 5
             if self.tester.handshake():
-                while time.time() > self.timoute:
-                    self.p = self.tester.get_packet
+                while time.time() < self.timeout:
+                    self.p = self.tester.get_packet(f=False)
                     self.tester.response_handler(d=self.p)
             return ': Ok'
         elif id == 1:
@@ -99,7 +102,13 @@ class TestSelectionForm(npyscreen.ActionFormV2):
 
 
 class BongjoviSimulator(npyscreen.NPSAppManaged):
+    def __init__(self, args):
+        self.args = args
+        TestSuite.tx = self.args.tx
+        TestSuite.rx = self.args.rx
+        super().__init__()
+
     def onStart(self):
-        self.ts = TestSuite()
+        self.ts = TestSuite(self.args)
         self.addForm('MAIN', TestSelectionForm, name="Bongjovi Simulator")
         self.addForm('STATUS', StatusForm, name='Testing Progress')

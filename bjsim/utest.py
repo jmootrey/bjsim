@@ -4,15 +4,12 @@ Handles serial communication and Testing
 Bonjoiv Amp
 
 '''
-
+import serial
 
 class Utest:
 
-    def __init__(self):
-        pass
 
-    def MakeLink(self, tx=None, rx=None):
-        import serial
+    def MakeLink(self, tx, rx):
         try:
             # transmit bus
             self.tx = serial.Serial(port=tx, baudrate=115200, timeout=.4)
@@ -20,7 +17,7 @@ class Utest:
             self.rx = serial.Serial(port=rx, baudrate=115200, timeout=.4)
             return True
         except ValueError:
-            raise NameError('Illegal Comm Parameter')
+            return NameError('Illegal Comm Parameter')
 
     def crc_check(self, d, m='check'):
         # checksum ~(b1 + b2 + b3)+1 & 127
@@ -53,7 +50,6 @@ class Utest:
                 else:
                     return self.crc_error
 
-
     # Compare data packet to expected return t/f
     def packet_library(self, msg=None):
         if self.msg == int('0x17', 16):  # Cabin Volume
@@ -77,8 +73,15 @@ class Utest:
 
     # Initiate communication with CWR450, return packet following init.
     def handshake(self):
+        self.im_awake = bytes([0x04, 0xBA, 0x00, 0x42])
         self.tx.write(self.im_awake)
-        return self.response_handler(d=self.get_packet(), e='ba', r=False)
+        while True:
+            self.r = self.get_packet(attempts=4)
+            if self.r:
+                break
+
+        self.r = self.response_handler(d=self.r, e='0xba', r=False)
+        return self.r
 
     def packet_assembly(self, d=None):
         self.rtn = bytes([0x04, d[1], d[2]])
@@ -88,14 +91,13 @@ class Utest:
     # Gen response handler. d=data_packet e=expected packet type
     # r = supply sane response to bus
     def response_handler(self, d=None, e=None, r=True):
-        self.msg = int(self.d[1], 16)
-        if self.r & self.e == self.d[1]:
-            self.tx.write(self.packet_assembly(self.d))
+        if r and e == hex(d[1]):
+            self.tx.write(self.packet_assembly(d))
             return True
-        elif not self.r & self.e == self.d[1]:
+        elif not r and e == d[1]:
             return True
-        elif not self.e & self.r:
-            self.rtn = self.packet_assembly(self.d)
+        elif not e and r:
+            self.rtn = self.packet_assembly(d)
             self.tx.write(self.rtn)
             return self.rtn
         else:
