@@ -2,47 +2,39 @@ import npyscreen
 from bjsim import utest
 
 
-class TestSuite(object):
+class TestSuite:
     tx = None
     rx = None
 
     def __init__(self, args):
         self.t = ["Normal Operating / Response", "Late Reply", "Mid-Op Reset"]
-        self.toRuni = None
-        self.toRunt = None
-        self.toRunz = None
+        self.toRuni = []
+        self.toRunt = []
 
-    def listTest(self, ):
+    def listTest(self):
         tests = self.t
         return tests
 
-    def makeList(self, sti, stt):
-        self.toRuni, self.toRunt = sti, stt
-        self.toRunz = zip(sti, stt)
-        self.toRunz = sorted(self.toRunz)
-        self.toRuni, self.toRunt = [], []
-        for i in self.toRunz:
-            self.toRuni.append(i[0])
-            self.toRunt.append(i[1])
+    def makeList(self, sti):
+        self.toRuni = sorted(sti)
+        for i in self.toRuni:
+            self.toRunt.append(self.t[i])
 
     def getList(self, rtype):
         if rtype == 'i':
-            tr = self.toRuni
-            return tr
+            return self.toRuni
         elif rtype == 't':
-            tr = self.toRunt
-            return tr
-        else:
-            tr = self.toRunz
-            return tr
+            for i in self.toRuni:
+                self.toRunt.append(self.t[i])
+            return self.toRunt
 
 
 class StatusForm(npyscreen.ActionFormV2):
     def create(self):
             # TitleSlider name refuses to update...
             self.max_width = 200
-            self.sb = self.add(npyscreen.TitleSlider, name='Progress:', step=0,
-                               out_of=100, max_width=50)
+            self.sb = self.add(npyscreen.TitleFixedText, name='Progress:', 
+                                value='0 / 0')
             self.rs = self.add(npyscreen.TitlePager, rely=5, name="History",
                                hidden=True, max_height=15)
             self.ui = self.add(npyscreen.FixedText, value="Press OK To Begin -->",
@@ -51,28 +43,36 @@ class StatusForm(npyscreen.ActionFormV2):
         self.parentApp.switchForm('MAIN')
 
     def on_ok(self):
+        self.complete = 0
         self.rt = []
         self.ti = self.parentApp.ts.getList('i')
         self.tt = self.parentApp.ts.getList('t')
-        self.sb.out_of = len(self.ti)
+        self.outof = len(self.ti)
+        self.sb.value= '0 / ' + str(self.outof)
         self.rs.hidden = False
         self.ui.value = "Running"
         self.display()
         self.r = utest.Utest(self.parentApp.ts.tx, self.parentApp.ts.rx)
         self.r.MakeLink()
-        for test in self.ti:
+
+        for self.test in self.ti:
             # Class/function to handle test
-            self.result = self.r.t(0)
+            self.complete += 1
+            self.sb.value = str(self.complete) + ' / ' + str(self.outof)
+            self.display()
+            self.result = self.r.RunTest(self.test)
             self.rtn = self.tt.pop(0)
-            self.rtn = self.rtn + self.result
+            if not self.result:
+                self.result = ' Test Implementation Error'
+            self.rtn = self.rtn + ':' + self.result
             self.rt.append(self.rtn)
             self.rs.values = self.rt
-            self.sb.value += 1
             self.display()
-        #else:
-            self.rs.values = 'Connection Failed'
-            self.display()
+        self.ui.value = 'Complete'
+        self.r.MakeLink(m='c')
+        self.display()
 
+        self.r.MakeLink(m='close')
 
 class TestSelectionForm(npyscreen.ActionFormWithMenus):
     def create(self):
@@ -89,8 +89,7 @@ class TestSelectionForm(npyscreen.ActionFormWithMenus):
         if self.parentApp.ts.tx == 'stdout' or self.parentApp.ts.rx == 'empty':
             self.parentApp.switchForm('WARNING')
         else:
-            self.parentApp.ts.makeList(self.selectedTest.value,
-                                       self.selectedTest.values)
+            self.parentApp.ts.makeList(self.selectedTest.value)
             self.parentApp.switchForm("STATUS")
 
     def on_cancel(self):
@@ -111,8 +110,8 @@ class DeviceWarning(npyscreen.ActionPopup):
 
 class SerialConfig(npyscreen.ActionPopup):
     def create(self):
-        self.rxp = self.add(npyscreen.TitleFilename, name='Receive:', value='/dev/')
-        self.txp = self.add(npyscreen.TitleFilename, name='Transmit:', value='/dev/')
+        self.rxp = self.add(npyscreen.TitleFilename, name='Receive:', value='/dev/ttyUSB')
+        self.txp = self.add(npyscreen.TitleFilename, name='Transmit:', value='/dev/ttyUSB')
         self.rx_exist = self.rxp.value
         self.tx_exist = self.txp.value
 
